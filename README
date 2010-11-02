@@ -1,0 +1,10 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=3308
+
+Refactor plugin for Vim.
+
+You can use this plugin to make some refactoring on your code.
+It was originally written to work with the Ruby language, but it's
+flexible (I hope, I'll add some more languages later) to work with
+another languages.
+
+http://github.com/taq/vim-refact
