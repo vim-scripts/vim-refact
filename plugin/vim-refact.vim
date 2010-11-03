@@ -1,6 +1,6 @@
 " Vim refactoring plugin
 " Last change: 2010-11-03
-" Version 0.0.2
+" Version 0.0.3
 " Maintainer: Eustaquio 'TaQ' Rangel
 " License: GPL
 " URL: git://github.com/taq/vim-refact.git
@@ -77,6 +77,7 @@ function! s:VimRefactExtractMethod(...) range
    let l:size  = l:scope[1][0]-l:scope[0][0]
    let l:argx  = ""
    let l:imeth = l:block =~ b:method_pattern
+   let l:mname = ""
 
    " lets check if there are arguments
    if(a:[0]>1)
@@ -84,12 +85,23 @@ function! s:VimRefactExtractMethod(...) range
       for l:argi in range(a:[0]-1)
          call add(l:argl,a:000[l:argi+1])
       endfor         
-      let l:argx = "(".join(l:argl,",").")"
+      let l:argx  = "(".join(l:argl,",").")"
+      let l:mname = a:1
+   else
+      let l:mname = s:VimRefactPrompt("Type the new method name")
+      if strlen(l:mname)<1
+         return
+      endif
+      let l:tokens = split(l:mname)
+      let l:mname  = l:tokens[0]
+      if len(l:tokens)>1
+         let l:argx = "(".join(l:tokens[1:],",").")"
+      endif
    endif
 
    " yank and create a new method
    execute a:firstline.",".a:lastline."y"
-   call append(l:scope[1][0]+(l:imeth ? 0 : -2),b:method." ".a:1.l:argx." ".b:start_pattern)
+   call append(l:scope[1][0]+(l:imeth ? 0 : -2),b:method." ".l:mname.l:argx." ".b:start_pattern)
    call append(l:scope[1][0]+(l:imeth ? 1 : -2),b:end_pattern)
 
    " put the yanked content
@@ -98,7 +110,7 @@ function! s:VimRefactExtractMethod(...) range
    " delete the selection and call the new method there, if needed
    execute a:firstline.",".a:lastline."d"
    if(l:imeth)
-      call append(a:firstline-1,a:1.l:argx.b:line_terminator)
+      call append(a:firstline-1,l:mname.l:argx.b:line_terminator)
    endif      
    call feedkeys("\<CR>","t")
 
@@ -109,9 +121,38 @@ function! s:VimRefactExtractMethod(...) range
    call feedkeys("=","t")
 endfunction
 
+function! s:VimRefactPrompt(prompt)
+   if &term =~ 'gui'
+      return inputdialog(a:prompt)
+   else
+      call inputsave()
+      let l:rtn = input(a:prompt." (or return to cancel): ")
+      call inputrestore()
+      return l:rtn
+   endif
+endfunction
+
+function! s:VimRefactAskForNewVarName()
+   let l:oname = expand("<cword>")
+   let l:nname = s:VimRefactPrompt("Type the new variable name")
+   if strlen(l:nname)<1
+      return
+   endif
+   call s:VimRefactRenameVariable(l:oname,l:nname)
+endfunction
+
 function! s:VimRefactRenameVariable(...)
    let l:scope = s:VimRefactGetScope()
    execute l:scope[0][0].",".l:scope[1][0]."s/".a:[1]."/".a:[2]."/g"
+endfunction
+
+function! s:VimRefactAskForNewAttrName()
+   let l:oname = expand("<cword>")
+   let l:nname = s:VimRefactPrompt("Type the new attribute name")
+   if strlen(l:nname)<1
+      return
+   endif
+   call s:VimRefactRenameAttribute(l:oname,l:nname)
 endfunction
 
 function! s:VimRefactRenameAttribute(...)
@@ -122,3 +163,9 @@ endfunction
 command! -range -nargs=+ Rem :<line1>,<line2>call <SID>VimRefactExtractMethod(<f-args>)
 command! -nargs=+ Rrv :call <SID>VimRefactRenameVariable(<f-args>)
 command! -nargs=+ Rra :call <SID>VimRefactRenameAttribute(<f-args>)
+
+vnoremap rem :call <SID>VimRefactExtractMethod()<CR>
+nnoremap rrv :call <SID>VimRefactAskForNewVarName()<CR>
+vnoremap rrv :call <SID>VimRefactAskForNewVarName()<CR>
+nnoremap rra :call <SID>VimRefactAskForNewAttrName()<CR>
+vnoremap rra :call <SID>VimRefactAskForNewAttrName()<CR>
